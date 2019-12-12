@@ -5,6 +5,13 @@ from pygame.locals import *
 WIDTH = 1366
 HEIGHT = 768
 
+acc = 0.2
+maxSpeed = 3
+maxTurbo = 6
+maxTRate = math.radians(4)
+tRateAcc = math.radians(0.4)
+respawn_time = 30
+
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
     image = pygame.image.load(fullname)
@@ -26,20 +33,51 @@ class Plane(pygame.sprite.Sprite):
         self.rect.centery = int(init_y)
         self.x = float(init_x)
         self.y = float(init_y)
-        self.health = 100
         self.angle = 0
-        self.theta = self.angle
-        self.speed = 3
-        self.turn_rate = math.radians(3)
+        self.speed = 0
+        self.turn_rate = 0
         self.turn_right = False
         self.turn_left = False
+        self.turbo = False
 
     def update(self):
-        if self.turn_right:
-            self.angle -= self.turn_rate
+        global acc, maxSpeed, maxTurbo, maxTRate, tRateAcc, respawn_time
 
         if self.turn_left:
-            self.angle += self.turn_rate
+            if self.turn_rate < maxTRate:
+                self.turn_rate += tRateAcc
+            if self.turn_rate > maxTRate:
+                self.turn_rate = maxTRate
+        
+        elif not (self.turn_left or self.turn_right):
+            if self.turn_rate > 0:
+                self.turn_rate -= math.radians(0.2)
+
+        if self.turn_right:
+            if self.turn_rate > -maxTRate:
+                self.turn_rate -= tRateAcc
+            if self.turn_rate < -maxTRate:
+                self.turn_rate = -maxTRate
+
+        elif not (self.turn_left or self.turn_right):
+            if self.turn_rate < 0:
+                self.turn_rate += math.radians(0.2)
+
+        if not (self.turn_left or self.turn_right) and self.turn_rate > -0.01 and self.turn_rate < 0.01:
+            self.turn_rate = 0
+        
+        if self.turbo:
+            if self.speed < maxTurbo:
+                self.speed += acc
+            if self.speed > maxTurbo:
+                self.speed = maxTurbo
+        else:
+            if self.speed > maxSpeed:
+                self.speed -= 0.1
+            if self.speed < maxSpeed:
+                self.speed = maxSpeed
+
+        self.angle += self.turn_rate
 
         self.image = pygame.transform.rotate(self.imor, math.degrees(self.angle))
         self.rect = self.image.get_rect(center=self.rect.center)
@@ -124,12 +162,13 @@ def main():
     clock = pygame.time.Clock()
 
     spawn_time = 150
+    global respawn_time
 
     # content
     missiles = pygame.sprite.Group()
     explotions = pygame.sprite.Group()
     player = Plane(WIDTH/2, HEIGHT/2)
-    playersprite = pygame.sprite.RenderPlain(player)
+    playersprite = pygame.sprite.Group(player)
 
     # loop
     while 1:
@@ -142,14 +181,14 @@ def main():
                 sys.exit()
             if event.type == KEYDOWN:
                 if event.key == K_SPACE:
-                    player.speed = 5
+                    player.turbo = True
                 if event.key == K_LEFT:
                     player.turn_left = True
                 elif event.key == K_RIGHT:
                     player.turn_right = True
             if event.type == KEYUP:
                 if event.key == K_SPACE:
-                    player.speed = 3
+                    player.turbo = False
                 if event.key == K_LEFT:
                     player.turn_left = False
                 elif event.key == K_RIGHT:
@@ -163,6 +202,10 @@ def main():
                     explotions.add(Explotion(m.rect.centerx, m.rect.centery))
                     missiles.remove(m)
                     missiles.remove(s)
+
+            for s in pygame.sprite.spritecollide(m, playersprite, False):
+                explotions.add(Explotion(m.rect.centerx, m.rect.centery))
+                missiles.remove(m)
         
         # Handle Sprites
         spawn_time -= 1
@@ -176,7 +219,7 @@ def main():
                 missiles.add(Missile(0, randint(0, HEIGHT), 0))
             elif spawn_origin == 4:
                 missiles.add(Missile(WIDTH, randint(0, HEIGHT), math.pi))
-            spawn_time = 30
+            spawn_time = respawn_time
 
         # Draw EEERRRRYTHING
         playersprite.update()
