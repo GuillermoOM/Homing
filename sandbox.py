@@ -7,17 +7,16 @@ HEIGHT = 768
 
 #Player
 acc = 0.2
-maxSpeed = 3
+maxSpeed = 4
 maxTurbo = 6
-maxTRate = math.radians(4)
+maxTRate = math.radians(3)
 tRateAcc = math.radians(0.4)
 
 #Missiles
-respawn_time = 30
-mMaxSpeed = 4
-mMaxTRate = math.radians(5)
-mTRateAcc = math.radians(0.4)
-Der = 20
+respawn_time = 500
+mMaxSpeed = 3
+Der = 0.002
+Inte = 20
 
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
@@ -115,19 +114,13 @@ class Missile(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=self.rect.center)
 
     def update(self, ppos):
-        global mTRateAcc, mMaxSpeed, mMaxTRate, Der
+        global mMaxSpeed, Der, Inte
         theta = math.atan2((ppos[1] - self.rect.centery), (self.rect.centerx - ppos[0])) + math.pi
         gamma = self.angle - theta
         if gamma >= math.pi or (-math.pi < gamma and gamma < 0):
-            if self.turn_rate < mMaxTRate:
-                self.turn_rate += abs(gamma) / Der
-            if self.turn_rate > mMaxTRate:
-                self.turn_rate = mMaxTRate
+            self.turn_rate += (abs(gamma) * Der) - self.turn_rate / Inte
         elif gamma <= -math.pi or (0 < gamma and gamma < math.pi):
-            if self.turn_rate > -mMaxTRate:
-                self.turn_rate -= abs(gamma) / Der
-            if self.turn_rate < -mMaxTRate:
-                self.turn_rate = -mMaxTRate
+            self.turn_rate -= (abs(gamma) * Der) + self.turn_rate / Inte
 
         self.angle += self.turn_rate
        
