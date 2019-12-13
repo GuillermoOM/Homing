@@ -5,12 +5,19 @@ from pygame.locals import *
 WIDTH = 1366
 HEIGHT = 768
 
+#Player
 acc = 0.2
 maxSpeed = 3
 maxTurbo = 6
 maxTRate = math.radians(4)
 tRateAcc = math.radians(0.4)
+
+#Missiles
 respawn_time = 30
+mMaxSpeed = 4
+mMaxTRate = math.radians(5)
+mTRateAcc = math.radians(0.4)
+Der = 20
 
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
@@ -41,7 +48,7 @@ class Plane(pygame.sprite.Sprite):
         self.turbo = False
 
     def update(self):
-        global acc, maxSpeed, maxTurbo, maxTRate, tRateAcc, respawn_time
+        global acc, maxSpeed, maxTurbo, maxTRate, tRateAcc
 
         if self.turn_left:
             if self.turn_rate < maxTRate:
@@ -102,19 +109,28 @@ class Missile(pygame.sprite.Sprite):
         self.y = float(init_y)
         self.health = 100
         self.angle = ang
+        self.turn_rate = 0
         self.theta = self.angle
-        self.speed = 3
-        self.turn_rate = math.radians(2)
         self.image = pygame.transform.rotate(self.imor, math.degrees(self.angle))
         self.rect = self.image.get_rect(center=self.rect.center)
 
     def update(self, ppos):
+        global mTRateAcc, mMaxSpeed, mMaxTRate, Der
         theta = math.atan2((ppos[1] - self.rect.centery), (self.rect.centerx - ppos[0])) + math.pi
         gamma = self.angle - theta
         if gamma >= math.pi or (-math.pi < gamma and gamma < 0):
-            self.angle += self.turn_rate
+            if self.turn_rate < mMaxTRate:
+                self.turn_rate += abs(gamma) / Der
+            if self.turn_rate > mMaxTRate:
+                self.turn_rate = mMaxTRate
         elif gamma <= -math.pi or (0 < gamma and gamma < math.pi):
-            self.angle -= self.turn_rate
+            if self.turn_rate > -mMaxTRate:
+                self.turn_rate -= abs(gamma) / Der
+            if self.turn_rate < -mMaxTRate:
+                self.turn_rate = -mMaxTRate
+
+        self.angle += self.turn_rate
+       
         if self.angle > 2*math.pi:
             self.angle -= 2*math.pi
         elif self.angle < 0:
@@ -123,8 +139,8 @@ class Missile(pygame.sprite.Sprite):
         self.image = pygame.transform.rotate(self.imor, math.degrees(self.angle))
         self.rect = self.image.get_rect(center=self.rect.center)
 
-        self.x += math.cos(self.angle) * self.speed
-        self.y -= math.sin(self.angle) * self.speed
+        self.x += math.cos(self.angle) * mMaxSpeed
+        self.y -= math.sin(self.angle) * mMaxSpeed
 
         self.rect.centerx = int(self.x)
         self.rect.centery = int(self.y)
@@ -157,6 +173,10 @@ class Explotion(pygame.sprite.Sprite):
 def main():
     # initialize
     pygame.init()
+    pygame.joystick.init()
+    if pygame.joystick.get_count():
+        joystick = pygame.joystick.Joystick(0)
+        joystick.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Homing")
     clock = pygame.time.Clock()
@@ -193,6 +213,21 @@ def main():
                     player.turn_left = False
                 elif event.key == K_RIGHT:
                     player.turn_right = False
+            if event.type == pygame.JOYBUTTONDOWN:
+                if event.button == 0:
+                    player.turbo = True
+            if event.type == pygame.JOYBUTTONUP:
+                if event.button == 0:
+                    player.turbo = False
+            if event.type == pygame.JOYHATMOTION:
+                if event.value == (-1, 0):
+                    player.turn_left = True
+                elif event.value == (1, 0):
+                    player.turn_right = True
+                elif event.value == (0, 0):
+                    player.turn_left = False
+                    player.turn_right = False
+
         for m in missiles:
             if m.rect.bottom > HEIGHT + 20 or m.rect.right > WIDTH + 20 or m.rect.top < -20 or m.rect.left < -20:
                 missiles.remove(m)
@@ -235,3 +270,22 @@ def main():
         pygame.display.flip()
 
 if __name__ == '__main__': main()
+
+
+# Control Xbox:
+
+# A: 0
+# B: 1
+# X: 2
+# Y: 3
+# LB: 4
+# RB: 5
+# BACK: 6
+# START: 7
+# LS: 8
+# RS: 9
+# HAT: (x, y)
+# LSA: (AxisX: 0, AxisY: 1)
+# RSA: (AxisX: 4, AxisY: 3)
+# LT: Axis2+
+# RT: Axis2-
