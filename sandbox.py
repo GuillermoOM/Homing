@@ -6,15 +6,15 @@ WIDTH = 1366
 HEIGHT = 768
 
 #Player
-acc = 0.2
+acc = 10
 maxSpeed = 4
-maxTurbo = 6
-maxTRate = math.radians(3)
+maxTurbo = 40
+maxTRate = math.radians(4)
 tRateAcc = math.radians(0.4)
 
 #Missiles
-respawn_time = 500
-mMaxSpeed = 3
+respawn_time = 50
+mMaxSpeed = 5
 Der = 0.002
 Inte = 20
 
@@ -57,7 +57,7 @@ class Plane(pygame.sprite.Sprite):
         
         elif not (self.turn_left or self.turn_right):
             if self.turn_rate > 0:
-                self.turn_rate -= math.radians(0.2)
+                self.turn_rate -= self.turn_rate * 0.1
 
         if self.turn_right:
             if self.turn_rate > -maxTRate:
@@ -67,7 +67,7 @@ class Plane(pygame.sprite.Sprite):
 
         elif not (self.turn_left or self.turn_right):
             if self.turn_rate < 0:
-                self.turn_rate += math.radians(0.2)
+                self.turn_rate -= self.turn_rate * 0.1
 
         if not (self.turn_left or self.turn_right) and self.turn_rate > -0.01 and self.turn_rate < 0.01:
             self.turn_rate = 0
@@ -79,7 +79,7 @@ class Plane(pygame.sprite.Sprite):
                 self.speed = maxTurbo
         else:
             if self.speed > maxSpeed:
-                self.speed -= 0.1
+                self.speed -= self.speed * 0.05
             if self.speed < maxSpeed:
                 self.speed = maxSpeed
 
@@ -90,6 +90,20 @@ class Plane(pygame.sprite.Sprite):
 
         self.x += math.cos(self.angle) * self.speed
         self.y -= math.sin(self.angle) * self.speed
+
+        if self.y > HEIGHT + 20:
+            self.y = 0
+            self.x = WIDTH - self.x
+        if self.x > WIDTH + 20:
+            self.x = 0
+            self.y = HEIGHT - self.y
+            
+        if self.y < -20:
+            self.y = HEIGHT
+            self.x = WIDTH - self.x
+        if self.x < -20:
+            self.x = WIDTH
+            self.y = HEIGHT - self.y
 
         self.rect.centerx = int(self.x)
         self.rect.centery = int(self.y)
@@ -114,7 +128,7 @@ class Missile(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=self.rect.center)
 
     def update(self, ppos):
-        global mMaxSpeed, Der, Inte
+        global mMaxSpeed, Der, Inte, WIDTH, HEIGHT
         theta = math.atan2((ppos[1] - self.rect.centery), (self.rect.centerx - ppos[0])) + math.pi
         gamma = self.angle - theta
         if gamma >= math.pi or (-math.pi < gamma and gamma < 0):
@@ -137,6 +151,8 @@ class Missile(pygame.sprite.Sprite):
 
         self.rect.centerx = int(self.x)
         self.rect.centery = int(self.y)
+
+        
 
 class Explotion(pygame.sprite.Sprite):
     def __init__(self, init_x, init_y):
