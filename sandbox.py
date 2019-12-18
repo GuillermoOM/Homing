@@ -18,6 +18,8 @@ mMaxSpeed = 5
 Der = 0.002
 Inte = 20
 
+#aasdasds
+
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
     image = pygame.image.load(fullname)
